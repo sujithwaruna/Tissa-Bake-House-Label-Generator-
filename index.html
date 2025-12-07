@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tissa Bake House Label Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;700&family=Noto+Sans+Tamil:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* FONTS */
+        @font-face {
+            font-family: 'Impact';
+            src: local('Impact'), local('Arial Narrow Bold'), local('sans-serif');
+        }
+
+        /* MASTER DESIGN - NATIVE PRINT SIZE 
+           Width: 67mm
+           Height: 40mm
+        */
+        .label-design {
+            width: 67mm;
+            height: 40mm;
+            border: 1px solid #ddd; /* Light border for screen view */
+            background: white;
+            color: black;
+            box-sizing: border-box;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* SCREEN PREVIEW SCALING */
+        /* Default Mobile: Scale 1 (Fit to screen) */
+        #master-label {
+            transform: scale(1.1);
+            transform-origin: top center;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10mm; 
+        }
+
+        /* Tablet & PC: Scale 1.5 (Zoomed) */
+        @media (min-width: 768px) {
+            #master-label {
+                transform: scale(1.5);
+                margin-bottom: 25mm;
+            }
+        }
+
+        /* HEADER (Yellow) - Fixed Height: 15mm */
+        .header-section {
+            height: 15mm;
+            background-color: #ffe500;
+            border-bottom: 0.5mm solid black;
+            position: relative;
+            flex-shrink: 0;
+            padding-top: 2mm;
+        }
+
+        /* BODY - Remaining Height: 25mm */
+        .body-section {
+            height: 25mm;
+            display: flex;
+            flex-direction: row;
+        }
+
+        /* LEFT COLUMN (Dates) - Width: 26mm */
+        .col-left {
+            width: 26mm;
+            border-right: 0.5mm solid black;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* RIGHT COLUMN (Name/Price) - Width: 41mm */
+        .col-right {
+            width: 41mm;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ROW STYLES */
+        .row-compact {
+            border-bottom: 0.4mm solid black;
+            display: flex;
+            align-items: center;
+        }
+
+        /* TEXT UTILITIES FOR PRINT */
+        .txt-sinhala { font-family: 'Noto Sans Sinhala', sans-serif; }
+        .txt-tamil { font-family: 'Noto Sans Tamil', sans-serif; } 
+        .txt-impact { font-family: 'Impact', sans-serif; }
+        
+        /* SCREEN PREVIEW WRAPPER */
+        .preview-wrapper {
+            padding: 40px 20px 20px 20px;
+            background: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* PRINT SETTINGS */
+        @media print {
+            @page {
+                size: A4;
+                margin: 0; 
+            }
+            body { 
+                margin: 0; 
+                padding: 0; 
+                background: white; 
+            }
+            .no-print { display: none !important; }
+
+            /* Grid Layout for A4 */
+            #print-area {
+                display: grid !important;
+                /* 3 Columns of 67mm */
+                grid-template-columns: repeat(3, 67mm);
+                /* 7 Rows of 40mm */
+                grid-template-rows: repeat(7, 40mm);
+                /* Centering on page */
+                justify-content: center;
+                align-content: start;
+                padding-top: 10mm; /* Top margin safe zone */
+                gap: 0; /* Tight fit */
+            }
+
+            .sticker-slot {
+                width: 67mm;
+                height: 40mm;
+                box-sizing: border-box;
+                position: relative;
+                overflow: hidden;
+            }
+
+            /* Remove screen borders/transforms for print */
+            .label-design {
+                border: none !important;
+                transform: none !important; /* RESET SCALE FOR PRINT */
+                margin: 0 !important;
+                box-shadow: none !important;
+            }
+
+            /* Cutting Guides */
+            .dashed-border {
+                outline: 1px dashed #999;
+                z-index: 10;
+            }
+
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+
+        #print-area { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans pb-20">
+
+    <div class="no-print max-w-6xl mx-auto p-4 md:p-6">
+        <div class="bg-white p-4 md:p-8 rounded-xl shadow-lg border border-gray-200">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-6 gap-4">
+                <div class="text-center md:text-left">
+                    <h1 class="text-2xl md:text-3xl font-bold text-red-700">Tissa Bake House Label Generator</h1>
+                    <p class="text-xs md:text-sm text-gray-500 mt-1">(Print Size: 6.7cm x 4.0cm)</p>
+                    <p class="text-xs md:text-sm text-gray-500 mt-1">(Design & Develop By Sujith Waruna | +94779407127)</p>
+                </div>
+                <button onclick="generatePrintSheet()" class="w-full md:w-auto bg-blue-800 text-white px-6 md:px-8 py-3 rounded-lg font-bold text-lg shadow hover:bg-blue-900 transition-all flex items-center justify-center gap-3">
+                    <span class="text-2xl">🖨️</span> Print Labels
+                </button>
+            </div>
+
+            <div class="bg-yellow-50 p-4 md:p-5 rounded-lg mb-6 border border-yellow-200">
+                <label class="font-bold text-sm uppercase block mb-2 text-gray-700">Select Product</label>
+                
+                <div class="flex flex-col lg:flex-row gap-3">
+                    <div class="flex-grow">
+                         <select id="productSelector" class="w-full border border-gray-300 p-3 rounded-lg text-base md:text-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500"></select>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 lg:flex gap-2 shrink-0">
+                        <button onclick="addNewProduct()" class="bg-blue-600 hover:bg-blue-700 text-white px-2 md:px-4 py-2 rounded-lg font-bold shadow flex flex-col md:flex-row items-center justify-center gap-1 text-xs md:text-base" title="Add New Product">
+                            <span class="text-lg md:text-xl">+</span> Add
+                        </button>
+                        <button onclick="deleteCurrentProduct()" class="bg-red-600 hover:bg-red-700 text-white px-2 md:px-4 py-2 rounded-lg font-bold shadow flex flex-col md:flex-row items-center justify-center gap-1 text-xs md:text-base" title="Delete Selected Product">
+                            <span class="text-lg md:text-base">🗑️</span> Delete
+                        </button>
+                        <button onclick="saveCurrentAsDefault()" class="bg-green-600 hover:bg-green-700 text-white px-2 md:px-4 py-2 rounded-lg font-bold shadow flex flex-col md:flex-row items-center justify-center gap-1 text-xs md:text-base" title="Save changes">
+                            <span class="text-lg md:text-base">💾</span> Update
+                        </button>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">Use "Add New" to create products. Use "Update" to save changes.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 text-base">
+                <div><label class="font-bold text-xs text-gray-500 uppercase tracking-wider mb-1 block">Sinhala Name</label><input id="in-sinhala" class="w-full border border-gray-300 p-3 rounded-lg text-lg focus:border-blue-500 outline-none"></div>
+                <div><label class="font-bold text-xs text-gray-500 uppercase tracking-wider mb-1 block">English Name</label><input id="in-english" class="w-full border border-gray-300 p-3 rounded-lg text-lg font-bold text-red-700 focus:border-blue-500 outline-none"></div>
+                <div><label class="font-bold text-xs text-gray-500 uppercase tracking-wider mb-1 block">MFD Date</label><input id="in-mfd" class="w-full border border-gray-300 p-3 rounded-lg text-lg focus:border-blue-500 outline-none"></div>
+                <div><label class="font-bold text-xs text-gray-500 uppercase tracking-wider mb-1 block">EXP Date</label><input id="in-exp" class="w-full border border-gray-300 p-3 rounded-lg text-lg focus:border-blue-500 outline-none"></div>
+                <div><label class="font-bold text-xs text-gray-500 uppercase tracking-wider mb-1 block">Price</label><input id="in-price" class="w-full border border-gray-300 p-3 rounded-lg text-lg font-bold focus:border-blue-500 outline-none"></div>
+                <div><label class="font-bold text-xs text-gray-500 uppercase tracking-wider mb-1 block">Weight / Qty</label><input id="in-weight" class="w-full border border-gray-300 p-3 rounded-lg text-lg focus:border-blue-500 outline-none"></div>
+                <div><label class="font-bold text-xs text-gray-500 uppercase tracking-wider mb-1 block">Batch</label><input id="in-batch" class="w-full border border-gray-300 p-3 rounded-lg text-lg focus:border-blue-500 outline-none"></div>
+                <div><label class="font-bold text-xs text-gray-500 uppercase tracking-wider mb-1 block">Print Quantity</label><input type="number" id="in-count" value="21" class="w-full border border-gray-300 p-3 rounded-lg text-lg font-bold bg-blue-50 focus:border-blue-500 outline-none"></div>
+            </div>
+            
+             <div class="mt-6 flex items-center gap-3">
+                <input type="checkbox" id="show-guides" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked>
+                <label for="show-guides" class="text-sm font-bold text-gray-700 select-none">Show Cutting Borders</label>
+            </div>
+        </div>
+
+        <div class="mt-8 text-center">
+            <h2 class="text-gray-400 font-bold uppercase text-xs tracking-[0.2em] mb-4">Label Preview</h2>
+            <div class="preview-wrapper rounded-xl border border-gray-200">
+                <div id="master-label" class="label-design">
+                    
+                    <div class="header-section flex flex-col items-center justify-start">
+                        <div class="absolute bottom-0 left-0 w-full h-[6mm] overflow-hidden z-0">
+                             <svg viewBox="0 0 100 20" preserveAspectRatio="none" class="w-full h-full">
+                                <path d="M0,20 Q50,0 100,20 Z" fill="#c62828" />
+                            </svg>
+                        </div>
+
+                        <div class="relative z-10 text-center leading-none w-full">
+                            <div class="txt-sinhala text-[#c62828] font-bold text-[15pt] drop-shadow-sm whitespace-nowrap">
+                                තිස්ස බේක් හවුස්
+                            </div>
+                            <div class="flex items-baseline justify-center gap-2 mt-[2.1px]">
+                                <span class="font-bold text-[#5d4037] text-[6.5pt] uppercase tracking-tighter" style="font-family: 'Arial Narrow'">TISSA BAKE HOUSE</span>
+                                <span class="font-bold text-[#5d4037] text-[6pt] txt-tamil">திஸ்ஸ பேக் ஹவுஸ்</span>
+                            </div>
+                            
+                            <div class="text-[3pt] font-bold text-black mt-[1px] leading-[3.6pt] max-w-[98%] mx-auto text-center px-1">
+                                <span id="out-ing-en" class="block">Ing: Wheat flour, margarine, salt, sugar, yeast</span>
+                                <span id="out-ing-si" class="block txt-sinhala">අඩංගු ද්‍රව්‍ය: තිරිඟු පිටි, මාගරින්, ලුණු, සීනි, ඊස්ට්</span>
+                                <span id="out-ing-ta" class="block txt-tamil">உள்ளடங்கியவை: கோதுமை மா, மாஜரின், உப்பு, சீனி, ஈஸ்ட்</span>
+                            </div>
+                        </div>
+                        
+                        <div class="absolute right-[0.5mm] top-[2mm] rotate-180" style="writing-mode: vertical-rl;">
+                            <span class="text-[5.5pt] font-bold">Reg: 12065</span>
+                        </div>
+                    </div>
+
+                    <div class="body-section">
+                        
+                        <div class="col-left">
+                            <div class="row-compact h-[8mm]">
+                                <div class="w-[9mm] border-right border-black h-full flex flex-col justify-center px-[0.5mm] border-r-[0.5mm] border-black text-center">
+                                    <span class="text-[4.5pt] font-bold leading-none block">MFD</span>
+                                    <span class="text-[4pt] font-bold leading-none block txt-sinhala my-[0.5px]">නිෂ්.දිනය</span>
+                                    <span class="text-[3.5pt] font-bold leading-none block txt-tamil">உற்பத்தி</span>
+                                </div>
+                                <div id="out-mfd" class="flex-1 text-center font-bold text-[8pt]"></div>
+                            </div>
+                            <div class="row-compact h-[8mm]">
+                                <div class="w-[9mm] border-right border-black h-full flex flex-col justify-center px-[0.5mm] border-r-[0.5mm] border-black text-center">
+                                    <span class="text-[4.5pt] font-bold leading-none block">EXP</span>
+                                    <span class="text-[4pt] font-bold leading-none block txt-sinhala my-[0.5px]">කල්.ඉකුත්</span>
+                                    <span class="text-[3.5pt] font-bold leading-none block txt-tamil">காலாவதி</span>
+                                </div>
+                                <div id="out-exp" class="flex-1 text-center font-bold text-[8pt]"></div>
+                            </div>
+                            <div class="flex-grow flex items-center">
+                                <div class="w-[9mm] h-full flex flex-col justify-center px-[0.5mm] border-r-[0.5mm] border-black text-center">
+                                    <span class="text-[4pt] font-bold leading-none block">MAX PRICE</span>
+                                    <span class="text-[3.5pt] font-bold leading-none block txt-sinhala my-[0.5px]">උපරිම මිල</span>
+                                    <span class="text-[3pt] font-bold leading-none block txt-tamil">கூடிய விலை</span>
+                                </div>
+                                <div id="out-price" class="flex-1 text-center font-bold text-[15pt]"></div>
+                            </div>
+                        </div>
+
+                        <div class="col-right">
+                            <div class="h-[12mm] border-bottom border-b-[0.5mm] border-black flex flex-col items-center justify-center text-center px-1 overflow-hidden">
+                                <span id="out-sinhala" class="txt-sinhala font-bold text-[12pt] leading-none mb-[5px]"></span>
+                                <span id="out-english" class="txt-impact text-[#c62828] text-[13pt] uppercase leading-[0.7] w-full" style="white-space: nowrap;"></span>
+                            </div>
+
+                            <div class="h-[7mm] border-b-[0.5mm] border-black flex">
+                                <div class="w-[50%] border-r-[0.5mm] border-black flex items-center justify-between px-[1mm]">
+                                    <div class="flex flex-col text-[4.1pt] font-bold leading-tight">
+                                        <span id="lbl-weight-en">Weight</span>
+                                        <span id="lbl-weight-si" class="txt-sinhala">බර</span>
+                                        <span id="lbl-weight-ta" class="txt-tamil">நிறை</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <span id="out-weight" class="text-[8pt] font-bold block leading-none"></span>
+                                        <span id="out-tol" class="text-[3pt] block mt-[0.5mm]">5g±</span>
+                                    </div>
+                                </div>
+                                <div class="w-[50%] flex items-center justify-between px-[1mm]">
+                                    <div class="flex flex-col text-[4.1pt] font-bold leading-tight text-right">
+                                        <span>Batch</span>
+                                        <span class="txt-sinhala">කාණ්ඩය</span>
+                                    </div>
+                                    <span id="out-batch" class="text-[8pt] font-bold"></span>
+                                </div>
+                            </div>
+
+                            <div class="flex-grow bg-black text-white flex flex-col justify-center items-center text-center leading-[4.1pt]">
+                                <span class="text-[3pt] font-bold txt-sinhala">මුරුතලාව පාර, අංක 119, කම්බියඩිය, මහනුවර</span>
+                                <span class="text-[3pt] font-bold my-[0.5px]">Muruthalawa Rd, 119, Kambiadiya, Kandy</span>
+                                <span class="text-[3pt] font-bold txt-tamil">முருத்தலாவ வீதி, இல. 119, கம்பிஅடிய, கண்டி</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                </div>
+        </div>
+    </div>
+
+    <div id="print-area"></div>
+
+    <script>
+        // --- DATA ---
+        let products = [
+            { id: 'p1', name: 'CUP CAKE (ස්පන්ච්)', sinhala: 'ස්පන්ච්', english: 'CUP CAKE', price: '600/-', weight: '10', batch: '222', measure: 'pieces' },
+            { id: 'p2', name: 'FAMILY BUN (ෆැමිලි බන්)', sinhala: 'ෆැමිලි බන්', english: 'FAMILY BUN', price: '110/-', weight: '120g', batch: '221', measure: 'weight' },
+            { id: 'p3', name: 'SWEET BREAD (ස්වීට් පාන්)', sinhala: 'ස්වීට් පාන්', english: 'SWEET BREAD', price: '120/-', weight: '175g', batch: '224', measure: 'weight' },
+            { id: 'p4', name: 'CREAM BUN (ක්‍රීම් බන්)', sinhala: 'ක්‍රීම් බන්', english: 'CREAM BUN', price: '50/-', weight: '60g', batch: '225', measure: 'weight' },
+            { id: 'p5', name: 'ADA CAKE (අඩ කේක්)', sinhala: 'අඩ කේක්', english: 'ADA CAKE', price: '400/-', weight: '10', batch: '222', measure: 'pieces' },
+            { id: 'p6', name: 'BISCUITS (විස්කෝතු)', sinhala: 'විස්කෝතු', english: 'BISCUITS', price: '90/-', weight: '90g', batch: '222', measure: 'weight' },
+            { id: 'p7', name: 'VAPERS CAKE (වේපස් කේක්)', sinhala: 'වේපස් කේක්', english: 'VAPERS CAKE', price: '700/-', weight: '10', batch: '222', measure: 'pieces' },
+            { id: 'p8', name: 'BABY RUSK (බේබි රස්ක්)', sinhala: 'බේබි රස්ක්', english: 'BABY RASK', price: '90/-', weight: '90g', batch: '220', measure: 'weight' },
+            { id: 'p10', name: 'FAMILY CHOCOLATE CREAM BUN (ෆැමිලි චොක්ලට් ක්‍රීම් බන්)', sinhala: 'ෆැමිලි චොක්ලට් ක්‍රීම් බන්', english: 'FAMILY CHOCOLATE CREAM BUN', price: '140/-', weight: '160g', batch: '224', measure: 'weight' },
+        ];
+
+        // CHECK FOR SAVED CUSTOM DEFAULTS/LIST
+        const savedProducts = localStorage.getItem('tissa_products_db_v1');
+        if (savedProducts) {
+            try {
+                products = JSON.parse(savedProducts);
+            } catch(e) { console.error('Error loading saved products'); }
+        }
+
+        let state = {
+            sinhala: 'ෆැමිලි බන්', english: 'FAMILY BUN', mfd: '2023.02.01',
+            exp: '2023.12.05', price: '600/-', weight: '10', batch: '222', type: 'pieces', currentId: 'p1'
+        };
+
+        // DOM ELEMENTS
+        const els = {
+            sName: document.getElementById('in-sinhala'),
+            eName: document.getElementById('in-english'),
+            mfd: document.getElementById('in-mfd'),
+            exp: document.getElementById('in-exp'),
+            price: document.getElementById('in-price'),
+            weight: document.getElementById('in-weight'),
+            batch: document.getElementById('in-batch'),
+            count: document.getElementById('in-count'),
+            guides: document.getElementById('show-guides'),
+            
+            // Outputs
+            o_sName: document.getElementById('out-sinhala'),
+            o_eName: document.getElementById('out-english'),
+            o_mfd: document.getElementById('out-mfd'),
+            o_exp: document.getElementById('out-exp'),
+            o_price: document.getElementById('out-price'),
+            o_weight: document.getElementById('out-weight'),
+            o_batch: document.getElementById('out-batch'),
+            o_tol: document.getElementById('out-tol'),
+            
+            // Ingredients Outputs
+            o_ing_en: document.getElementById('out-ing-en'),
+            o_ing_si: document.getElementById('out-ing-si'),
+            o_ing_ta: document.getElementById('out-ing-ta'),
+
+            // Dynamic Labels
+            lbl_en: document.getElementById('lbl-weight-en'),
+            lbl_si: document.getElementById('lbl-weight-si'),
+            lbl_ta: document.getElementById('lbl-weight-ta')
+        };
+
+        function render() {
+            // --- INGREDIENTS LOGIC ---
+            if (state.currentId === 'p10') {
+                // FAMILY CHOCOLATE CREAM BUN
+                els.o_ing_en.innerText = "Ing: Wheat flour, margarine, Coco powder, salt, sugar, yeast";
+                els.o_ing_si.innerText = "අඩංගු ද්‍රව්‍ය: තිරිඟු පිටි, කොකෝ පිටි, මාගරින්, ලුණු, සීනි, ඊස්ට්";
+                els.o_ing_ta.innerText = "உள்ளடங்கியவை: கோதுமை மா, கொக்கோ தூள், மாஜரின், உப்பு, சீனி, ஈஸ்ட்";
+            } else if (state.currentId === 'p5') {
+                // ADA CAKE
+                els.o_ing_en.innerText = "Ing: Wheat flour, margarine, baking powder, milk powder, eggs, essence";
+                els.o_ing_si.innerText = "අඩංගු ද්‍රව්‍ය: තිරිඟු පිටි, මාගරින්, බේකින් පවුඩර්, බිත්තර, කිරිපිටි, එසන්ස්";
+                els.o_ing_ta.innerText = "உள்ளடங்கியவை: கோதுமை மா, மாகரின், பேகிங் பவுடர், முட்டை, பால் மா, எசன்ஸ்";
+            } else {
+                // DEFAULT (All other products)
+                els.o_ing_en.innerText = "Ing: Wheat flour, margarine, salt, sugar, yeast";
+                els.o_ing_si.innerText = "අඩංගු ද්‍රව්‍ය: තිරිඟු පිටි, මාගරින්, ලුණු, සීනි, ඊස්ට්";
+                els.o_ing_ta.innerText = "உள்ளடங்கியவை: கோதுமை மா, மாஜரின், உப்பு, சீனி, ஈஸ்ட்";
+            }
+
+            // --- FONT SIZING FOR NAMES ---
+            if(state.sinhala.length > 20) {
+                els.o_sName.style.fontSize = "8.3pt"; 
+            } else {
+                els.o_sName.style.fontSize = "12pt"; 
+            }
+            els.o_sName.innerText = state.sinhala;
+            els.o_eName.innerText = state.english;
+            els.o_mfd.innerText = state.mfd;
+            els.o_exp.innerText = state.exp;
+            els.o_price.innerText = state.price;
+            els.o_weight.innerText = state.weight;
+            els.o_batch.innerText = state.batch;
+
+            // --- LOGIC: PIECES vs WEIGHT ---
+            if(state.type === 'pieces') {
+                els.lbl_en.innerText = "Pieces";
+                els.lbl_si.innerText = "කැබලි ගණන";
+                els.lbl_ta.innerText = "எண்ணிக்கை"; 
+                els.o_tol.style.display = 'none'; // Hide 5g tolerance
+            } else {
+                els.lbl_en.innerText = "Weight";
+                els.lbl_si.innerText = "බර";
+                els.lbl_ta.innerText = "நிறை";
+                els.o_tol.style.display = 'block';
+            }
+
+            // Dynamic Font Sizing for Long English Names
+            if(state.english.length > 20) {
+                 els.o_eName.style.fontSize = "9pt"; 
+                 els.o_eName.style.lineHeight = "0.85";
+                 els.o_eName.style.whiteSpace = "normal"; // Allow wrapping
+            } else if(state.english.length > 15) {
+                els.o_eName.style.fontSize = "11pt"; 
+                els.o_eName.style.lineHeight = "0.9";
+                els.o_eName.style.whiteSpace = "normal";
+            } else if(state.english.length > 12) {
+                els.o_eName.style.fontSize = "13pt"; 
+                els.o_eName.style.whiteSpace = "nowrap";
+            } else {
+                els.o_eName.style.fontSize = "15pt"; 
+                els.o_eName.style.whiteSpace = "nowrap";
+            }
+        }
+
+        // INIT SELECTOR
+        const sel = document.getElementById('productSelector');
+        
+        function populateSelector() {
+            sel.innerHTML = ''; // clear
+            const defOpt = document.createElement('option');
+            defOpt.innerText = "-- Select Product --";
+            defOpt.value = "";
+            sel.appendChild(defOpt);
+
+            products.forEach(p => {
+                const o = document.createElement('option');
+                o.value = p.id;
+                o.innerText = p.name;
+                if(state.currentId === p.id) o.selected = true;
+                sel.appendChild(o);
+            });
+        }
+        populateSelector();
+
+        sel.addEventListener('change', e => {
+            if(!e.target.value) return;
+            const p = products.find(x => x.id === e.target.value);
+            if(p) {
+                state.currentId = p.id;
+                state.sinhala = p.sinhala;
+                state.english = p.english;
+                state.price = p.price;
+                state.weight = p.weight;
+                state.batch = p.batch;
+                state.type = p.measure || 'weight';
+                syncInputs();
+                render();
+            }
+        });
+
+        function syncInputs() {
+            els.sName.value = state.sinhala;
+            els.eName.value = state.english;
+            els.price.value = state.price;
+            els.weight.value = state.weight;
+            els.batch.value = state.batch;
+            els.mfd.value = state.mfd;
+            els.exp.value = state.exp;
+        }
+
+        // INPUT LISTENERS
+        ['sName','eName','mfd','exp','price','weight','batch'].forEach(k => {
+            els[k].addEventListener('input', e => {
+                if(k=='sName') state.sinhala = e.target.value;
+                if(k=='eName') state.english = e.target.value;
+                if(k=='mfd') state.mfd = e.target.value;
+                if(k=='exp') state.exp = e.target.value;
+                if(k=='price') state.price = e.target.value;
+                if(k=='weight') state.weight = e.target.value;
+                if(k=='batch') state.batch = e.target.value;
+                render();
+            });
+        });
+
+        // --- NEW FUNCTIONS FOR ADD/REMOVE ---
+
+        function saveProductsToStorage() {
+            localStorage.setItem('tissa_products_db_v1', JSON.stringify(products));
+        }
+
+        function addNewProduct() {
+            const nameEn = prompt("Enter English Name (e.g., NEW BUN):");
+            if(!nameEn) return;
+            
+            const nameSi = prompt("Enter Sinhala Name (e.g., නිව් බන්):");
+            if(!nameSi) return;
+
+            // Ask for measure type
+            const isPieces = confirm("Is this product sold by PIECES?\n\nClick OK for Pieces (count).\nClick Cancel for Weight (g/kg).");
+            const measureType = isPieces ? 'pieces' : 'weight';
+
+            const newId = 'custom_' + Date.now();
+            const newProd = {
+                id: newId,
+                name: `${nameEn} (${nameSi})`,
+                sinhala: nameSi,
+                english: nameEn,
+                price: '',
+                weight: '',
+                batch: '',
+                measure: measureType
+            };
+
+            products.push(newProd);
+            saveProductsToStorage();
+            populateSelector();
+            
+            // Auto select new product
+            sel.value = newId;
+            sel.dispatchEvent(new Event('change'));
+        }
+
+        function deleteCurrentProduct() {
+            if(!state.currentId) {
+                alert("Please select a product first.");
+                return;
+            }
+            
+            if(confirm("Are you sure you want to permanently delete this product?")) {
+                products = products.filter(p => p.id !== state.currentId);
+                saveProductsToStorage();
+                populateSelector();
+                
+                // Reset Selection
+                if(products.length > 0) {
+                    sel.value = products[0].id;
+                    sel.dispatchEvent(new Event('change'));
+                } else {
+                    sel.value = "";
+                    // Clear fields if no products left
+                    state.english = ""; state.sinhala = ""; 
+                    syncInputs(); render();
+                }
+            }
+        }
+
+        // SAVE CUSTOM DEFAULTS FUNCTION
+        function saveCurrentAsDefault() {
+            if(!state.currentId || state.currentId === '') {
+                alert("Please select a product first.");
+                return;
+            }
+
+            const idx = products.findIndex(p => p.id === state.currentId);
+            if(idx > -1) {
+                // Update object in array
+                products[idx].sinhala = state.sinhala;
+                products[idx].english = state.english;
+                products[idx].price = state.price;
+                products[idx].weight = state.weight;
+                products[idx].batch = state.batch;
+                // Update display name in dropdown if English name changed
+                products[idx].name = `${state.english} (${state.sinhala})`;
+
+                saveProductsToStorage();
+                populateSelector();
+                alert(`Saved defaults for ${state.english}!`);
+            }
+        }
+
+        // LOAD DEFAULTS
+        if(localStorage.getItem('tissa_label_state_v3')) {
+            try {
+                const loadedState = JSON.parse(localStorage.getItem('tissa_label_state_v3'));
+                state = { ...state, ...loadedState }; // merge
+            } catch(e) {}
+        }
+        syncInputs();
+        render();
+
+        // SAVE ON PRINT
+        function generatePrintSheet() {
+            localStorage.setItem('tissa_label_state_v3', JSON.stringify(state));
+            
+            const area = document.getElementById('print-area');
+            const master = document.getElementById('master-label');
+            const count = els.count.value;
+            const guides = els.guides.checked;
+            
+            area.innerHTML = '';
+
+            for(let i=0; i<count; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'sticker-slot';
+                if(guides) slot.classList.add('dashed-border');
+
+                const clone = master.cloneNode(true);
+                clone.id = "";
+                // Remove scale for printing
+                clone.style.transform = "none";
+                clone.style.margin = "0";
+                
+                slot.appendChild(clone);
+                area.appendChild(slot);
+            }
+            window.print();
+        }
+    </script>
+</body>
+</html>
