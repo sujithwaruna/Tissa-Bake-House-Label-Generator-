@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tissa Bake House Label Generator</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Roboto+Condensed:wght@400;700&family=Noto+Sans+Sinhala:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* =========================================
+           FIXED SETTINGS (UNCHANGED)
+           ========================================= */
+        :root {
+            /* --- 1. GLOBAL VERTICAL SPACING --- */
+            --row-gap:       1.2mm; 
+            /* --- 2. INNER TEXT SPACING --- */
+            --header-gap:    0.5mm; 
+            --label-padding: 1mm;
+
+            /* --- FONT SIZES (pt) --- */
+            --fs-brand: 9.2pt;
+            --fs-mfd:   8.5pt;
+            --fs-exp:   8.5pt;
+            --fs-price: 10pt;  
+            --fs-batch: 8.5pt;
+            --fs-footer: 6pt;
+            
+            /* Label Header Sizes */
+            --fs-header-eng: 6.5pt; 
+            --fs-header-sin: 6.5pt;
+
+            /* --- LETTER SPACING (px) --- */
+            --ls-brand: 0px;
+            --ls-mfd:   0px;
+            --ls-exp:   0px;
+            --ls-price: 0px;
+            --ls-batch: 0px;
+            --ls-footer: 0px;
+
+            /* --- NEW UI VARIABLES --- */
+            --ui-primary: #c62828;
+            --ui-primary-hover: #b71c1c;
+            --ui-bg: #f8fafc;
+            --ui-panel-bg: #ffffff;
+            --ui-border: #e2e8f0;
+            --ui-text: #334155;
+            --ui-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* =========================================
+           APP UI STYLES (IMPROVED)
+           ========================================= */
+        body {
+            font-family: 'Inter', sans-serif; /* Modern UI Font */
+            background-color: var(--ui-bg);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            color: var(--ui-text);
+        }
+
+        #app-ui {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* CONTROL PANEL */
+        .controls-panel {
+            width: 340px; /* Slightly wider for better spacing */
+            background: var(--ui-panel-bg);
+            padding: 1.5rem;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            z-index: 10;
+            flex-shrink: 0;
+            border-right: 1px solid var(--ui-border);
+            overflow-y: auto; 
+        }
+
+        /* Branding Area */
+        .brand-header {
+            text-align: center;
+            margin-bottom: 5px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--ui-border);
+        }
+        h1 { 
+            font-size: 1.35rem; 
+            font-weight: 700; 
+            color: #1e293b; 
+            margin: 0; 
+            letter-spacing: -0.5px;
+        }
+        .subtitle { 
+            font-size: 0.75rem; 
+            color: #64748b; 
+            margin-top: 4px; 
+            font-weight: 500;
+        }
+
+        .section { display: flex; flex-direction: column; gap: 0.85rem; }
+        
+        h2 { 
+            font-size: 0.85rem; 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #64748b; 
+            margin: 0 0 0.2rem 0; 
+            font-weight: 700;
+        }
+
+        .input-group { display: flex; flex-direction: column; gap: 0.35rem; position: relative; }
+
+        .row-inputs { display: flex; gap: 12px; }
+        .row-inputs > div { flex: 1; }
+
+        label { font-size: 0.85rem; font-weight: 500; color: #475569; }
+
+        /* Modern Inputs */
+        input[type="text"], input[type="number"], input[type="date"] {
+            padding: 0.65rem 0.75rem;
+            border: 1px solid var(--ui-border);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            width: 100%;
+            box-sizing: border-box;
+            background: #fff;
+            color: #334155;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--ui-primary);
+            box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.1);
+        }
+
+        /* Tools (Small buttons inside/near inputs) */
+        .tool-bar {
+            display: flex;
+            gap: 5px;
+            margin-top: 2px;
+        }
+        .tool-btn {
+            background: #e2e8f0;
+            border: none;
+            color: #475569;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .tool-btn:hover { background: #cbd5e1; color: #1e293b; }
+        .tool-btn.active-tool { background: #fee2e2; color: var(--ui-primary); }
+
+        /* Input with Icon Wrapper */
+        .input-wrapper { position: relative; width: 100%; }
+        .input-icon-right {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #64748b;
+            padding: 4px;
+        }
+        .input-icon-right:hover { color: var(--ui-primary); }
+
+        /* Checkbox styling */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            background: #fff;
+            padding: 0.5rem;
+            border: 1px solid var(--ui-border);
+            border-radius: 6px;
+        }
+        .checkbox-group input { width: auto; margin: 0; cursor: pointer; accent-color: var(--ui-primary); }
+        .checkbox-group label { margin: 0; cursor: pointer; font-size: 0.9rem; }
+
+        .actions {
+            margin-top: auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--ui-border);
+        }
+
+        button {
+            width: 100%;
+            padding: 0.85rem;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.1s, opacity 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button:active { transform: translateY(1px); }
+        
+        .btn-primary { background-color: var(--ui-primary); }
+        .btn-primary:hover { background-color: var(--ui-primary-hover); }
+        
+        .btn-secondary { background-color: #475569; }
+        .btn-secondary:hover { background-color: #334155; }
+
+        .preview-area {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f1f5f9;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 24px 24px;
+            overflow: hidden; 
+            position: relative;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            #app-ui { flex-direction: column; overflow-y: auto; }
+            .controls-panel { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--ui-border); }
+            .preview-area { min-height: 400px; }
+        }
+
+        /* =========================================
+           STICKER STYLES (UNCHANGED CORE)
+           ========================================= */
+        .sticker-base {
+            width: 28.57mm;
+            height: 28.70mm;
+            background: white;
+            position: relative;
+            overflow: hidden;
+            box-sizing: border-box;
+            padding: var(--label-padding);
+            
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; 
+            gap: var(--row-gap); 
+
+            font-family: 'Roboto Condensed', 'Noto Sans Sinhala', sans-serif;
+            border: 1px dashed #cbd5e1; 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transition: transform 0.2s;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-col {
+            display: flex;
+            flex-direction: column;
+            line-height: 1;
+            margin-bottom: var(--header-gap); 
+        }
+        
+        .price-row .header-col { margin-bottom: 0; } 
+        .price-item .header-col { margin-bottom: var(--header-gap); }
+
+        .header-eng {
+            color: #c62828;
+            font-size: var(--fs-header-eng);
+            font-weight: 700;
+        }
+        .header-sin {
+            color: #c62828;
+            font-size: var(--fs-header-sin);
+            font-weight: 400;
+        }
+
+        .val-text {
+            font-weight: 700;
+            color: #000;
+            line-height: 1; 
+        }
+
+        /* Specific Element Styling mapped to Variables */
+        #display-brand {
+            text-align: center;
+            color: #c62828;
+            font-weight: 800;
+            text-transform: uppercase;
+            line-height: 1;
+            font-size: var(--fs-brand);
+            letter-spacing: var(--ls-brand);
+        }
+
+        #display-mfd {
+            font-size: var(--fs-mfd);
+            letter-spacing: var(--ls-mfd);
+        }
+
+        #display-exp {
+            font-size: var(--fs-exp);
+            letter-spacing: var(--ls-exp);
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        #display-price {
+            font-size: var(--fs-price);
+            letter-spacing: var(--ls-price);
+            line-height: 0.9;
+            margin-top: var(--header-gap); 
+        }
+
+        #display-batch {
+            font-size: var(--fs-batch);
+            letter-spacing: var(--ls-batch);
+            line-height: 0.9;
+            text-align: right;
+            margin-top: var(--header-gap);
+        }
+
+        .footer {
+            color: #c62828; /* Changed to Red */
+            text-align: center;
+            white-space: normal;
+            line-height: 1;
+            margin-top: auto; 
+            font-size: var(--fs-footer);
+            letter-spacing: var(--ls-footer);
+        }
+
+        /* =========================================
+           PRINT SETTINGS
+           ========================================= */
+        #print-area { display: none; }
+
+        @media print {
+            #app-ui { display: none !important; }
+            #print-area { display: block !important; position: absolute; top: 0; left: 0; width: 100%; }
+            body { background: white; height: auto; display: block; }
+            
+            .sticker-base { border: none; box-shadow: none; }
+
+            body.print-mode-single @page { size: 28.57mm 28.70mm; margin: 0; }
+            
+            body.print-mode-a4 @page { size: A4 portrait; margin: 0; }
+            body.print-mode-a4 #print-area {
+                display: grid !important;
+                grid-template-columns: repeat(7, 28.57mm);
+                grid-template-rows: repeat(10, 28.70mm);
+                justify-content: center;
+                align-content: center;
+                width: 210mm; height: 297mm;
+                margin: 0 auto;
+            }
+
+            /* --- BORDER LOGIC --- */
+            /* Default: No Border */
+            body.print-mode-a4 .sticker-base { border: none; }
+
+            /* If 'with-borders' class is present, show SINGLE DASHED BLACK border */
+            body.print-mode-a4.with-borders .sticker-base { 
+                border: 1px dashed black; /* Single line, 1px thickness */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-ui">
+        <div class="controls-panel">
+            <div class="brand-header">
+                <h1>Label Generator</h1>
+                <div class="subtitle">Design & Develop By Sujith Waruna</div>
+            </div>
+
+            <div class="section">
+                <h2>Product Details</h2>
+                
+                <div class="input-group">
+                    <label>MFD Date</label>
+                    <div class="input-wrapper">
+                        <input type="date" id="mfd">
+                    </div>
+                    <div class="tool-bar">
+                        <button type="button" class="tool-btn" onclick="setToday()">Today</button>
+                        <button type="button" class="tool-btn" onclick="setYesterday()">Yesterday</button>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>EXP Date</label>
+                    <input type="date" id="exp">
+                    <div class="tool-bar">
+                        <button type="button" class="tool-btn" onclick="addDays(3)">+3 Days</button>
+                        <button type="button" class="tool-btn" onclick="addDays(5)">+5 Days</button>
+                        <button type="button" class="tool-btn" onclick="addDays(7)">+7 Days</button>
+                        <button type="button" class="tool-btn" onclick="addDays(14)">+2 Wks</button>
+                    </div>
+                </div>
+
+                <div class="row-inputs">
+                    <div class="input-group">
+                        <label>Price (Rs.)</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="price" value="90" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Batch No.</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="batch" value="159">
+                            <button type="button" class="input-icon-right" onclick="incrementBatch()" title="Increment Batch">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Print Settings</h2>
+                <div class="input-group">
+                    <label>Quantity (A4 Mode - Max 70)</label>
+                    <input type="number" id="print-qty" value="70" min="1" max="70">
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="show-borders" checked>
+                    <label for="show-borders">Show Cut Borders</label>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button type="button" id="btn-single" class="btn-primary">
+                    <span>🖨️ Print Single</span>
+                </button>
+                <button type="button" id="btn-a4" class="btn-secondary">
+                    <span>📄 Print A4 Page</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="preview-area">
+            <div id="sticker-preview-wrapper">
+                <div class="sticker-base" id="sticker-template">
+                    
+                    <div class="row">
+                        <div class="header-col">
+                            <span class="header-eng">Mfd:</span>
+                            <span class="header-sin">නි.දි.</span>
+                        </div>
+                        <div class="val-text" id="display-mfd">2025-11-24</div>
+                    </div>
+
+                    <div id="display-brand">TISSA BAKE HOUSE</div>
+
+                    <div class="row">
+                        <div class="header-col">
+                            <span class="header-eng">Exp:</span>
+                            <span class="header-sin">කා.ඉ.දි.</span>
+                        </div>
+                        <div class="val-text" id="display-exp">2026-02-24</div>
+                    </div>
+
+                    <div class="price-row">
+                        <div class="price-item">
+                            <div class="header-col">
+                                <span class="header-sin" style="font-weight:bold; color:#c62828;">උ.සි.මි:</span>
+                            </div>
+                            <div class="val-text" id="display-price">Rs. 90/-</div>
+                        </div>
+                        <div style="text-align: right;" class="price-item">
+                            <div class="header-col" style="align-items: flex-end;">
+                                <span class="header-eng">කා.අ/ B.No</span>
+                            </div>
+                            <div class="val-text" id="display-batch">159</div>
+                        </div>
+                    </div>
+
+                    <div class="footer">No. Kambiadiya, Yahalatenna</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="print-area"></div>
+
+    <script>
+        // 1. Text Update & Storage Logic
+        const inputs = {
+            mfd: document.getElementById('mfd'),
+            exp: document.getElementById('exp'),
+            price: document.getElementById('price'),
+            batch: document.getElementById('batch')
+        };
+        const displays = {
+            mfd: document.getElementById('display-mfd'),
+            exp: document.getElementById('display-exp'),
+            price: document.getElementById('display-price'),
+            batch: document.getElementById('display-batch')
+        };
+
+        // --- NEW HELPER FUNCTIONS ---
+
+        function setToday() {
+            const today = new Date().toISOString().split('T')[0];
+            inputs.mfd.value = today;
+            updateText();
+        }
+
+        function setYesterday() {
+            const d = new Date();
+            d.setDate(d.getDate() - 1);
+            inputs.mfd.value = d.toISOString().split('T')[0];
+            updateText();
+        }
+
+        function addDays(days) {
+            if(!inputs.mfd.value) {
+                alert("Please select MFD date first");
+                return;
+            }
+            const date = new Date(inputs.mfd.value);
+            date.setDate(date.getDate() + days);
+            inputs.exp.value = date.toISOString().split('T')[0];
+            updateText();
+        }
+
+        function incrementBatch() {
+            let val = parseInt(inputs.batch.value) || 0;
+            inputs.batch.value = val + 1;
+            updateText();
+        }
+
+        function loadSavedData() {
+            if(localStorage.getItem('lbl_mfd')) inputs.mfd.value = localStorage.getItem('lbl_mfd');
+            else setToday(); // Default to today if empty
+
+            if(localStorage.getItem('lbl_exp')) inputs.exp.value = localStorage.getItem('lbl_exp');
+            else addDays(7); // Default to +7 days if empty
+            
+            // For price, we store the raw number, so no change needed to logic here
+            if(localStorage.getItem('lbl_price')) inputs.price.value = localStorage.getItem('lbl_price');
+            
+            if(localStorage.getItem('lbl_batch')) inputs.batch.value = localStorage.getItem('lbl_batch');
+            updateText();
+        }
+
+        function updateText() {
+            displays.mfd.textContent = inputs.mfd.value;
+            displays.exp.textContent = inputs.exp.value;
+            
+            // --- PRICE AUTO FORMATTING LOGIC ---
+            // 1. Get value, remove existing 'Rs.' or '/-' if user accidentally types them
+            // 2. Add them back cleanly
+            let rawPrice = inputs.price.value.replace(/Rs\.|Rs|\/-|[^0-9.]/g, '').trim();
+            displays.price.textContent = `Rs. ${rawPrice}/-`;
+
+            displays.batch.textContent = inputs.batch.value;
+
+            localStorage.setItem('lbl_mfd', inputs.mfd.value);
+            localStorage.setItem('lbl_exp', inputs.exp.value);
+            
+            // Save exactly what is in the input box (the raw number)
+            localStorage.setItem('lbl_price', inputs.price.value);
+            
+            localStorage.setItem('lbl_batch', inputs.batch.value);
+        }
+
+        Object.values(inputs).forEach(inp => inp.addEventListener('input', updateText));
+        
+        // Initialize
+        loadSavedData();
+
+
+        // 2. Scaling Logic (Kept mostly same, adjusted padding)
+        function scaleLabelToFit() {
+            const previewArea = document.querySelector('.preview-area');
+            const wrapper = document.getElementById('sticker-preview-wrapper');
+            if(!previewArea || !wrapper || previewArea.offsetParent === null) return;
+
+            const padding = 60; // Increased padding for better visuals
+            const baseW = 28.57 * 3.78; 
+            const baseH = 28.70 * 3.78;
+
+            const scale = Math.min(
+                (previewArea.clientWidth - padding) / baseW,
+                (previewArea.clientHeight - padding) / baseH
+            );
+            
+            wrapper.style.transform = `scale(${Math.max(1, Math.min(scale, 6))})`;
+        }
+        window.addEventListener('resize', scaleLabelToFit);
+        window.addEventListener('load', scaleLabelToFit);
+
+        // 3. Print Logic
+        function setupPrint(mode) {
+            const printArea = document.getElementById('print-area');
+            const template = document.getElementById('sticker-template');
+            
+            // Get user settings
+            const userQty = document.getElementById('print-qty').value;
+            const showBorders = document.getElementById('show-borders').checked;
+            
+            printArea.innerHTML = '';
+            document.body.className = '';
+            document.body.classList.add('print-mode-' + mode);
+            
+            // Apply border class if checkbox is checked
+            if(showBorders) {
+                document.body.classList.add('with-borders');
+            }
+
+            // Determine count: 1 for single mode, user input for A4 mode
+            let count = (mode === 'single') ? 1 : (parseInt(userQty) || 70);
+            
+            // Safety cap for A4 (standard page fits ~70)
+            if(mode === 'a4' && count > 70) count = 70;
+
+            const fragment = document.createDocumentFragment();
+            
+            for(let i=0; i<count; i++) {
+                const clone = template.cloneNode(true);
+                clone.id = ''; 
+                fragment.appendChild(clone);
+            }
+            
+            printArea.appendChild(fragment);
+            window.print();
+        }
+
+        document.getElementById('btn-single').onclick = () => setupPrint('single');
+        document.getElementById('btn-a4').onclick = () => setupPrint('a4');
+
+        window.addEventListener('afterprint', () => {
+             document.body.className = '';
+             document.getElementById('print-area').innerHTML = '';
+             scaleLabelToFit();
+        });
+    </script>
+</body>
+</html>
